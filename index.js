@@ -22,16 +22,25 @@ const client = new MongoClient(uri, {
 async function run() {
   try {
     const userCollection = client.db("shohojmart").collection('users')
-
+    const productCollection = client.db("shohojmart").collection('products')
+   
+    // post user data---------------
     app.post('/users', async (req, res) => {
         const user = req.body;
         const isExist = await userCollection.findOne({ email: user.email });  
         if (isExist) {
-            return res.send({ status: 'User Already Exists' });
+            return res.send({ status: false });
         }
         const result = await userCollection.insertOne({ ...user, role: 'user', status: '' });
-        res.send(result);
+        res.send({ status: true, result });
     });
+
+    // post product data -----------
+    app.post('/addProduct', async(req, res)=>{
+        const data = req.body;
+        const result = await productCollection.insertOne(data)
+        res.send(result);
+    })
     
 
     
