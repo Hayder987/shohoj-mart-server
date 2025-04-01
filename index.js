@@ -1,6 +1,6 @@
 require("dotenv").config();
 const express = require("express");
-const { MongoClient, ServerApiVersion } = require("mongodb");
+const { MongoClient, ServerApiVersion, ObjectId } = require("mongodb");
 const port = process.env.PORT || 5000;
 const cors = require("cors");
 const app = express();
@@ -45,7 +45,7 @@ async function run() {
       res.send(result);
     });
 
-    // get all product for admin
+    // get all product--------------
     app.get("/allProducts", async (req, res) => {
         try {
             const category = req.query.category;
@@ -61,6 +61,14 @@ async function run() {
             res.status(500).send({ message: "Server Error", error });
         }
     });
+
+    // delete product data----------------
+    app.delete('/deleteProduct/:id', async(req, res)=>{
+        const id = req.params.id;
+        const query = {_id: new ObjectId(id)}
+        const result = await productCollection.deleteOne(query)
+        res.send(result);
+    })
     
 
     console.log(
