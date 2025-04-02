@@ -46,14 +46,14 @@ async function run() {
     });
 
     // update product data by id
-    app.patch('/product/:id', async(req, res)=>{
+    app.patch("/product/:id", async (req, res) => {
       const id = req.params.id;
       const product = req.body;
-      const query = {_id: new ObjectId(id)}
+      const query = { _id: new ObjectId(id) };
       const updateDoc = {
         $set: {
-          title:product.title,
-          brandName:product.brandName,
+          title: product.title,
+          brandName: product.brandName,
           modelName: product.modelName,
           description: product.description,
           category: product.category,
@@ -62,47 +62,64 @@ async function run() {
           stock: product.stock,
           productCode: product.productCode,
           image: product.image,
-          updateOn: product.updateOn 
+          updateOn: product.updateOn,
         },
       };
-      const result = await productCollection.updateOne(query, updateDoc)
-      res.send(result)
+      const result = await productCollection.updateOne(query, updateDoc);
+      res.send(result);
     });
-  
-    
-    // get all product--------------
+
+    // get all product by category, all, limit & sort --------------
     app.get("/allProducts", async (req, res) => {
-        try {
-            const category = req.query.category;
-            let query = {}; 
-               
-            if (category) {
-                query = { category: category }; 
-            }
-            const result = await productCollection.find(query).toArray();
-            res.send(result);
-        } catch (error) {
-            console.error("Error fetching products:", error);
-            res.status(500).send({ message: "Server Error", error });
+      try {
+        const category = req.query.category;
+        const limit = parseInt(req.query.limit);
+        const sort = req.query.sort; 
+
+        let query = {};
+        let limitNumber = 0;
+        let sortQuery = {}; 
+       
+        if (category) {
+          query = { category: category };
         }
+
+        if (limit) {
+          limitNumber = limit;
+        }
+
+        if (sort === "recent") {
+          sortQuery = { postDate: -1 }; 
+        }
+
+        const result = await productCollection
+          .find(query)
+          .sort(sortQuery) 
+          .limit(limitNumber)
+          .toArray();
+
+        res.send(result);
+      } catch (error) {
+        console.error("Error fetching products:", error);
+        res.status(500).send({ message: "Server Error", error });
+      }
     });
 
     // get single product data by Id
-    app.get('/product/:id', async(req, res)=>{
+    app.get("/product/:id", async (req, res) => {
       const id = req.params.id;
-      const query = {_id: new ObjectId(id)};
+      const query = { _id: new ObjectId(id) };
       const result = await productCollection.findOne(query);
       res.send(result);
-    })
+    });
 
     // delete product data----------------
-    app.delete('/deleteProduct/:id', async(req, res)=>{
-        const id = req.params.id;
-        const query = {_id: new ObjectId(id)}
-        const result = await productCollection.deleteOne(query)
-        res.send(result);
-    })
-    
+    app.delete("/deleteProduct/:id", async (req, res) => {
+      const id = req.params.id;
+      const query = { _id: new ObjectId(id) };
+      const result = await productCollection.deleteOne(query);
+      res.send(result);
+    });
 
     console.log(
       "Pinged your deployment. You successfully connected to MongoDB!"
