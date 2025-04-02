@@ -45,6 +45,31 @@ async function run() {
       res.send(result);
     });
 
+    // update product data by id
+    app.patch('/product/:id', async(req, res)=>{
+      const id = req.params.id;
+      const product = req.body;
+      const query = {_id: new ObjectId(id)}
+      const updateDoc = {
+        $set: {
+          title:product.title,
+          brandName:product.brandName,
+          modelName: product.modelName,
+          description: product.description,
+          category: product.category,
+          price: product.price,
+          feature: product.feature,
+          stock: product.stock,
+          productCode: product.productCode,
+          image: product.image,
+          updateOn: product.updateOn 
+        },
+      };
+      const result = await productCollection.updateOne(query, updateDoc)
+      res.send(result)
+    });
+  
+    
     // get all product--------------
     app.get("/allProducts", async (req, res) => {
         try {
