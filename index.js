@@ -62,6 +62,14 @@ async function run() {
         }
     });
 
+    // get single product data by Id
+    app.get('/product/:id', async(req, res)=>{
+      const id = req.params.id;
+      const query = {_id: new ObjectId(id)};
+      const result = await productCollection.findOne(query);
+      res.send(result);
+    })
+
     // delete product data----------------
     app.delete('/deleteProduct/:id', async(req, res)=>{
         const id = req.params.id;
