@@ -38,6 +38,14 @@ async function run() {
       res.send({ status: true, result });
     });
 
+    // get user Data by email---------
+    app.get('/user/:email', async(req, res)=>{
+      const email = req.params.email;
+      const query = {email:email}
+      const result = await userCollection.findOne(query)
+      res.send(result);
+    })
+
     // post product data -----------
     app.post("/addProduct", async (req, res) => {
       const data = req.body;
