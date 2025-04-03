@@ -22,6 +22,7 @@ async function run() {
   try {
     const userCollection = client.db("shohojmart").collection("users");
     const productCollection = client.db("shohojmart").collection("products");
+    const reviewCollection = client.db("shohojmart").collection("reviews");
 
     // post user data---------------
     app.post("/users", async (req, res) => {
@@ -128,6 +129,24 @@ async function run() {
       const result = await productCollection.deleteOne(query);
       res.send(result);
     });
+
+
+    // review Api ------------------------------------------------------------->
+
+    // post review data
+    app.post("/review", async(req, res)=>{
+      const review = req.body;
+      const result = await reviewCollection.insertOne(review);
+      res.send(result);
+    })
+
+    // get review data-------------------------------->
+    app.get('/reviews/:id', async(req, res)=>{
+      const id = req.params.id;
+      const query = {productId:id};
+      const result = await reviewCollection.find(query).sort({date: -1}).toArray();
+      res.send(result);
+    })
 
     console.log(
       "Pinged your deployment. You successfully connected to MongoDB!"
