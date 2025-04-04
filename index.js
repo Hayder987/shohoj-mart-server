@@ -154,9 +154,14 @@ async function run() {
     // post cart data
     app.post('/cart', async(req, res)=>{
       const cart = req.body;
+      const isExist = await cartCollection.findOne({porductId:cart.porductId, userEmail:cart.userEmail})
+      if(isExist){
+        return res.status(400).send({ message: 'Already Added' });
+      }
       const result = await cartCollection.insertOne(cart);
       res.send(result);
     })
+    
 
     console.log(
       "Pinged your deployment. You successfully connected to MongoDB!"
