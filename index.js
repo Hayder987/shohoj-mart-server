@@ -23,6 +23,7 @@ async function run() {
     const userCollection = client.db("shohojmart").collection("users");
     const productCollection = client.db("shohojmart").collection("products");
     const reviewCollection = client.db("shohojmart").collection("reviews");
+    const cartCollection = client.db("shohojmart").collection("cart");
 
     // post user data---------------
     app.post("/users", async (req, res) => {
@@ -140,11 +141,20 @@ async function run() {
       res.send(result);
     })
 
-    // get review data-------------------------------->
+    // get review data
     app.get('/reviews/:id', async(req, res)=>{
       const id = req.params.id;
       const query = {productId:id};
-      const result = await reviewCollection.find(query).sort({date: -1}).toArray();
+      const result = await reviewCollection.find(query).sort({date: -1}).limit(10).toArray();
+      res.send(result);
+    })
+
+    // cart Api------------------------------------------------------------------------->
+
+    // post cart data
+    app.post('/cart', async(req, res)=>{
+      const cart = req.body;
+      const result = await cartCollection.insertOne(cart);
       res.send(result);
     })
 
