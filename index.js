@@ -161,6 +161,30 @@ async function run() {
       const result = await cartCollection.insertOne(cart);
       res.send(result);
     })
+
+    // get cart Data
+    app.get('/cart/:email', async(req, res)=>{
+      const email = req.params.email;
+      const query = {userEmail: email}
+      const result = await cartCollection.find(query).toArray();
+      res.send(result);
+    })
+
+    // delete cart data by id--
+    app.delete('/cart/:id', async(req, res)=>{
+      const id = req.params.id;
+      const query = {_id: new ObjectId(id)};
+      const result = await cartCollection.deleteOne(query);
+      res.send(result);
+    })
+
+    // delete all data by email
+    app.delete('/userCart/:email', async(req, res)=>{
+      const email = req.params.email;
+      const query = {userEmail: email};
+      const result = await cartCollection.deleteMany(query);
+      res.send(result);
+    })
     
 
     console.log(
