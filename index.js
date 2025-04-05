@@ -24,6 +24,7 @@ async function run() {
     const productCollection = client.db("shohojmart").collection("products");
     const reviewCollection = client.db("shohojmart").collection("reviews");
     const cartCollection = client.db("shohojmart").collection("cart");
+    const wishListCollection = client.db("shohojmart").collection("wishList");
 
     // post user data---------------
     app.post("/users", async (req, res) => {
@@ -185,7 +186,43 @@ async function run() {
       const result = await cartCollection.deleteMany(query);
       res.send(result);
     })
+
+    // wish List API --------------------------------------------------------->
+
+    // post wish list
+    app.post('/wishlist', async(req, res)=>{
+      const wishList = req.body;
+      const isExist = await wishListCollection.findOne({porductId:wishList.porductId, userEmail:wishList.userEmail})
+      if(isExist){
+        return res.status(400).send({ message: 'Already Added' });
+      }
+      const result = await wishListCollection.insertOne(wishList);
+      res.send(result);
+    })
+
+    // get wish data
+    app.get('/wishlist/:email', async(req, res)=>{
+      const email = req.params.email;
+      const query = {userEmail: email};
+      const result = await wishListCollection.find(query).toArray();
+      res.send(result);
+    })
     
+    // delete wish data
+    app.delete('/wish/:id', async(req, res)=>{
+      const id = req.params.id;
+      const query = {_id: new ObjectId(id)};
+      const result = await wishListCollection.deleteOne(query);
+      res.send(result);
+    })
+    
+    // delete all wish data by email
+    app.delete('/userWish/:email', async(req, res)=>{
+      const email = req.params.email;
+      const query = {userEmail: email};
+      const result = await wishListCollection.deleteMany(query);
+      res.send(result);
+    })
 
     console.log(
       "Pinged your deployment. You successfully connected to MongoDB!"
