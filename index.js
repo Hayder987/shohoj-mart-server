@@ -152,7 +152,7 @@ async function run() {
 
     // cart Api------------------------------------------------------------------------->
 
-    // post cart data
+    // post cart data single
     app.post('/cart', async(req, res)=>{
       const cart = req.body;
       const isExist = await cartCollection.findOne({porductId:cart.porductId, userEmail:cart.userEmail})
@@ -160,6 +160,14 @@ async function run() {
         return res.status(400).send({ message: 'Already Added' });
       }
       const result = await cartCollection.insertOne(cart);
+      res.send(result);
+    })
+
+    // post cart data many
+    app.post('/carts', async(req, res)=>{
+      const data = req.body;
+      const options = { ordered: true };
+      const result = await cartCollection.insertMany(data, options)
       res.send(result);
     })
 
