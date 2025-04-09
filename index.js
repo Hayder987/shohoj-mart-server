@@ -116,33 +116,42 @@ async function run() {
       }
     });
 
-    // get all product for all collection
-    app.get('/allCollection', async(req, res)=>{
+    // get all product for all collection with pagination
+    app.get('/allCollection', async (req, res) => {
       const page = parseInt(req.query.page) || 1;
       const limit = parseInt(req.query.limit) || 12;
       const category = req.query.category;
+      const search = req.query.search; 
+    
       let query = {};
-
-      if ( category ) {
-        query = {category:category};
+    
+      if (category) {
+        query.category = category;
       }
+    
+      if (search) {
+        query.title = { $regex: search, $options: 'i' }; 
+      }
+    
       const skip = (page - 1) * limit;
+    
       const items = await productCollection
         .find(query)
         .skip(skip)
         .limit(limit)
         .sort({ _id: -1 })
         .toArray();
-      const totalItems = await productCollection.countDocuments();
-
+    
+      const totalItems = await productCollection.countDocuments(query); 
+    
       res.send({
         items,
         totalItems,
         totalPages: Math.ceil(totalItems / limit),
         currentPage: page,
       });
-      
-    })
+    });
+    
 
     
     // get single product data by Id
