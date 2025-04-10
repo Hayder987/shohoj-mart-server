@@ -52,6 +52,7 @@ async function run() {
     // post product data -----------
     app.post("/addProduct", async (req, res) => {
       const data = req.body;
+      data.price = parseInt(data.price);  
       const result = await productCollection.insertOne(data);
       res.send(result);
     });
@@ -68,7 +69,7 @@ async function run() {
           modelName: product.modelName,
           description: product.description,
           category: product.category,
-          price: product.price,
+          price: parseInt(product.price),
           feature: product.feature,
           stock: product.stock,
           productCode: product.productCode,
@@ -121,7 +122,8 @@ async function run() {
       const page = parseInt(req.query.page) || 1;
       const limit = parseInt(req.query.limit) || 12;
       const category = req.query.category;
-      const search = req.query.search; 
+      const search = req.query.search;
+      const sort = parseInt(req.query.sort); 
     
       let query = {};
     
@@ -130,19 +132,25 @@ async function run() {
       }
     
       if (search) {
-        query.title = { $regex: search, $options: 'i' }; 
+        query.title = { $regex: search, $options: 'i' };
       }
     
       const skip = (page - 1) * limit;
+    
+      // Build sort object
+      let sortQuery = { _id: -1 }; 
+      if (sort === 1 || sort === -1) {
+        sortQuery = { price: sort }; 
+      }
     
       const items = await productCollection
         .find(query)
         .skip(skip)
         .limit(limit)
-        .sort({ _id: -1 })
+        .sort(sortQuery)
         .toArray();
     
-      const totalItems = await productCollection.countDocuments(query); 
+      const totalItems = await productCollection.countDocuments(query);
     
       res.send({
         items,
