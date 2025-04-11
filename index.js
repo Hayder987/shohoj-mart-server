@@ -47,20 +47,27 @@ async function run() {
       res.send(result);
     })
 
-    // update user Data
+    // update user Data role
     app.patch('/updateUser/:id', async (req, res)=>{
       const id = req.params.id;
       const body = req.body;
       const query = {_id: new ObjectId(id)}
       const updateDoc = {
         $set: {
-          name: body.name,
           role: body.role
         },
       }
 
       const result = await userCollection.updateOne(query, updateDoc);
       res.send(result);
+    })
+
+    // delete user Data
+    app.delete('/deleteUser/:id', async(req, res)=>{
+      const id = req.params.id;
+      const query = {_id: new ObjectId(id)}
+      const result = await userCollection.deleteOne(query)
+      res.send(result)
     })
 
     // get user Data by email---------
