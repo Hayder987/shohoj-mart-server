@@ -41,6 +41,28 @@ async function run() {
       res.send({ status: true, result });
     });
 
+    // get All User
+    app.get('/allUser', async(req, res)=>{
+      const result = await userCollection.find().toArray();
+      res.send(result);
+    })
+
+    // update user Data
+    app.patch('/updateUser/:id', async (req, res)=>{
+      const id = req.params.id;
+      const body = req.body;
+      const query = {_id: new ObjectId(id)}
+      const updateDoc = {
+        $set: {
+          name: body.name,
+          role: body.role
+        },
+      }
+
+      const result = await userCollection.updateOne(query, updateDoc);
+      res.send(result);
+    })
+
     // get user Data by email---------
     app.get('/user/:email', async(req, res)=>{
       const email = req.params.email;
