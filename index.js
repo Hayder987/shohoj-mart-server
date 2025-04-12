@@ -61,6 +61,12 @@ async function run() {
       res.send(result);
     });
 
+    // get all order data
+    app.get('/allOrder', async(req, res)=>{
+      const result = await paymentCollection.find().sort({_id: -1}).toArray();
+      res.send(result);
+    })
+
     // post user data---------------
     app.post("/users", async (req, res) => {
       const user = req.body;
