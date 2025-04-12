@@ -67,6 +67,20 @@ async function run() {
       res.send(result);
     })
 
+    // update single order status
+    app.patch('/updateOrder/:id', async(req, res)=>{
+      const id = req.params.id;
+      const body = req.body;
+      const query = {_id: new ObjectId(id)}
+      const updateDoc = {
+        $set:{
+          status: body.status
+        }
+      }
+      const result = await paymentCollection.updateOne(query, updateDoc)
+      res.send(result)
+    })
+
     // post user data---------------
     app.post("/users", async (req, res) => {
       const user = req.body;
