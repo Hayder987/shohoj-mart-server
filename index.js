@@ -4,6 +4,8 @@ const { MongoClient, ServerApiVersion, ObjectId } = require("mongodb");
 const port = process.env.PORT || 5000;
 const cors = require("cors");
 const app = express();
+const Stripe = require("stripe");
+const stripe = new Stripe(process.env.STRIPE_SECRET_KEY);
 
 app.use(cors());
 app.use(express.json());
@@ -25,6 +27,20 @@ async function run() {
     const reviewCollection = client.db("shohojmart").collection("reviews");
     const cartCollection = client.db("shohojmart").collection("cart");
     const wishListCollection = client.db("shohojmart").collection("wishList");
+
+     // stripe setup--------------------------------------->
+     app.post("/create-payment-intent", async (req, res) => {
+      const { price } = req.body;
+      const amount = parseFloat(price * 100) || 51;
+
+      const paymentIntent = await stripe.paymentIntents.create({
+        amount: amount,
+        currency: "usd",
+        payment_method_types: ["card"],
+        // confirm: true,
+      });
+      res.send({ clientSecret: paymentIntent.client_secret });
+    });
 
     // post user data---------------
     app.post("/users", async (req, res) => {
