@@ -63,8 +63,21 @@ async function run() {
 
     // get all order data
     app.get('/allOrder', async(req, res)=>{
-      const result = await paymentCollection.find().sort({_id: -1}).toArray();
+      const sort = req.query.sort;
+      let query = {}
+      if(sort){
+        query = {status:sort}
+      }
+      const result = await paymentCollection.find(query).sort({_id: -1}).toArray();
       res.send(result);
+    })
+
+    // get single order data
+    app.get('/singleOrder/:id', async(req, res)=>{
+      const id = req.params.id;
+      const query = {_id: new ObjectId(id)}
+      const result = await paymentCollection.findOne(query)
+      res.send(result)
     })
 
     // update single order status
