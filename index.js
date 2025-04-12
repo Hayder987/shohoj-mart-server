@@ -29,8 +29,8 @@ async function run() {
     const wishListCollection = client.db("shohojmart").collection("wishList");
     const paymentCollection = client.db("shohojmart").collection("payment");
 
-     // stripe setup--------------------------------------->
-     app.post("/create-payment-intent", async (req, res) => {
+    // stripe setup--------------------------------------->
+    app.post("/create-payment-intent", async (req, res) => {
       const { price } = req.body;
       const amount = parseFloat(price * 100) || 51;
 
@@ -43,12 +43,23 @@ async function run() {
       res.send({ clientSecret: paymentIntent.client_secret });
     });
 
-  //  post Payment data on server
-  app.post('/payment', async(req, res)=>{
-    const body = req.body;
-    const result = await paymentCollection.insertOne(body)
-    res.send(result)
-  })
+    //  post Payment data on server and reduce stock
+    app.post('/payment', async (req, res) => {
+      const body = req.body;
+      const itemsList = body.itemsList;
+  
+      for (const item of itemsList) {
+        const productId = item;
+        const objectId = new ObjectId(productId);
+  
+        await productCollection.updateOne(
+          { _id: objectId },
+          { $inc: { stock: -1 } }
+        );
+      }
+      const result = await paymentCollection.insertOne(body);
+      res.send(result);
+    });
 
     // post user data---------------
     app.post("/users", async (req, res) => {
@@ -66,52 +77,52 @@ async function run() {
     });
 
     // get All User
-    app.get('/allUser', async(req, res)=>{
+    app.get("/allUser", async (req, res) => {
       const role = req.query.role;
-      let query= {}
-      if(role){
-        query = {role:role}
+      let query = {};
+      if (role) {
+        query = { role: role };
       }
       const result = await userCollection.find(query).toArray();
       res.send(result);
-    })
+    });
 
     // update user Data role
-    app.patch('/updateUser/:id', async (req, res)=>{
+    app.patch("/updateUser/:id", async (req, res) => {
       const id = req.params.id;
       const body = req.body;
-      const query = {_id: new ObjectId(id)}
+      const query = { _id: new ObjectId(id) };
       const updateDoc = {
         $set: {
-          role: body.role
+          role: body.role,
         },
-      }
+      };
 
       const result = await userCollection.updateOne(query, updateDoc);
       res.send(result);
-    })
+    });
 
     // delete user Data
-    app.delete('/deleteUser/:id', async(req, res)=>{
+    app.delete("/deleteUser/:id", async (req, res) => {
       const id = req.params.id;
-      const query = {_id: new ObjectId(id)}
-      const result = await userCollection.deleteOne(query)
-      res.send(result)
-    })
+      const query = { _id: new ObjectId(id) };
+      const result = await userCollection.deleteOne(query);
+      res.send(result);
+    });
 
     // get user Data by email---------
-    app.get('/user/:email', async(req, res)=>{
+    app.get("/user/:email", async (req, res) => {
       const email = req.params.email;
-      const query = {email:email}
-      const result = await userCollection.findOne(query)
+      const query = { email: email };
+      const result = await userCollection.findOne(query);
       res.send(result);
-    })
+    });
 
     // post product data -----------
     app.post("/addProduct", async (req, res) => {
       const data = req.body;
-      data.price = parseInt(data.price); 
-      data.stock = parseInt(data.stock) 
+      data.price = parseInt(data.price);
+      data.stock = parseInt(data.stock);
       const result = await productCollection.insertOne(data);
       res.send(result);
     });
@@ -145,12 +156,12 @@ async function run() {
       try {
         const category = req.query.category;
         const limit = parseInt(req.query.limit);
-        const sort = req.query.sort; 
+        const sort = req.query.sort;
 
         let query = {};
         let limitNumber = 0;
-        let sortQuery = {}; 
-       
+        let sortQuery = {};
+
         if (category) {
           query = { category: category };
         }
@@ -160,12 +171,12 @@ async function run() {
         }
 
         if (sort === "recent") {
-          sortQuery = { postDate: -1 }; 
+          sortQuery = { postDate: -1 };
         }
 
         const result = await productCollection
           .find(query)
-          .sort(sortQuery) 
+          .sort(sortQuery)
           .limit(limitNumber)
           .toArray();
 
@@ -177,40 +188,40 @@ async function run() {
     });
 
     // get all product for all collection with pagination
-    app.get('/allCollection', async (req, res) => {
+    app.get("/allCollection", async (req, res) => {
       const page = parseInt(req.query.page) || 1;
       const limit = parseInt(req.query.limit) || 12;
       const category = req.query.category;
       const search = req.query.search;
-      const sort = parseInt(req.query.sort); 
-    
+      const sort = parseInt(req.query.sort);
+
       let query = {};
-    
+
       if (category) {
         query.category = category;
       }
-    
+
       if (search) {
-        query.title = { $regex: search, $options: 'i' };
+        query.title = { $regex: search, $options: "i" };
       }
-    
+
       const skip = (page - 1) * limit;
-    
+
       // Build sort object
-      let sortQuery = { _id: -1 }; 
+      let sortQuery = { _id: -1 };
       if (sort === 1 || sort === -1) {
-        sortQuery = { price: sort }; 
+        sortQuery = { price: sort };
       }
-    
+
       const items = await productCollection
         .find(query)
         .skip(skip)
         .limit(limit)
         .sort(sortQuery)
         .toArray();
-    
+
       const totalItems = await productCollection.countDocuments(query);
-    
+
       res.send({
         items,
         totalItems,
@@ -218,9 +229,7 @@ async function run() {
         currentPage: page,
       });
     });
-    
 
-    
     // get single product data by Id
     app.get("/product/:id", async (req, res) => {
       const id = req.params.id;
@@ -237,105 +246,114 @@ async function run() {
       res.send(result);
     });
 
-
     // review Api ------------------------------------------------------------->
 
     // post review data
-    app.post("/review", async(req, res)=>{
+    app.post("/review", async (req, res) => {
       const review = req.body;
       const result = await reviewCollection.insertOne(review);
       res.send(result);
-    })
+    });
 
     // get review data
-    app.get('/reviews/:id', async(req, res)=>{
+    app.get("/reviews/:id", async (req, res) => {
       const id = req.params.id;
-      const query = {productId:id};
-      const result = await reviewCollection.find(query).sort({date: -1}).limit(10).toArray();
+      const query = { productId: id };
+      const result = await reviewCollection
+        .find(query)
+        .sort({ date: -1 })
+        .limit(10)
+        .toArray();
       res.send(result);
-    })
+    });
 
     // cart Api------------------------------------------------------------------------->
 
     // post cart data single
-    app.post('/cart', async(req, res)=>{
+    app.post("/cart", async (req, res) => {
       const cart = req.body;
-      const isExist = await cartCollection.findOne({porductId:cart.porductId, userEmail:cart.userEmail})
-      if(isExist){
-        return res.status(400).send({ message: 'Already Added' });
+      const isExist = await cartCollection.findOne({
+        porductId: cart.porductId,
+        userEmail: cart.userEmail,
+      });
+      if (isExist) {
+        return res.status(400).send({ message: "Already Added" });
       }
       const result = await cartCollection.insertOne(cart);
       res.send(result);
-    })
+    });
 
     // post cart data many
-    app.post('/carts', async(req, res)=>{
+    app.post("/carts", async (req, res) => {
       const data = req.body;
       const options = { ordered: true };
-      const result = await cartCollection.insertMany(data, options)
+      const result = await cartCollection.insertMany(data, options);
       res.send(result);
-    })
+    });
 
     // get cart Data
-    app.get('/cart/:email', async(req, res)=>{
+    app.get("/cart/:email", async (req, res) => {
       const email = req.params.email;
-      const query = {userEmail: email}
+      const query = { userEmail: email };
       const result = await cartCollection.find(query).toArray();
       res.send(result);
-    })
+    });
 
     // delete cart data by id--
-    app.delete('/cart/:id', async(req, res)=>{
+    app.delete("/cart/:id", async (req, res) => {
       const id = req.params.id;
-      const query = {_id: new ObjectId(id)};
+      const query = { _id: new ObjectId(id) };
       const result = await cartCollection.deleteOne(query);
       res.send(result);
-    })
+    });
 
     // delete all data by email
-    app.delete('/userCart/:email', async(req, res)=>{
+    app.delete("/userCart/:email", async (req, res) => {
       const email = req.params.email;
-      const query = {userEmail: email};
+      const query = { userEmail: email };
       const result = await cartCollection.deleteMany(query);
       res.send(result);
-    })
+    });
 
     // wish List API --------------------------------------------------------->
 
     // post wish list
-    app.post('/wishlist', async(req, res)=>{
+    app.post("/wishlist", async (req, res) => {
       const wishList = req.body;
-      const isExist = await wishListCollection.findOne({porductId:wishList.porductId, userEmail:wishList.userEmail})
-      if(isExist){
-        return res.status(400).send({ message: 'Already Added' });
+      const isExist = await wishListCollection.findOne({
+        porductId: wishList.porductId,
+        userEmail: wishList.userEmail,
+      });
+      if (isExist) {
+        return res.status(400).send({ message: "Already Added" });
       }
       const result = await wishListCollection.insertOne(wishList);
       res.send(result);
-    })
+    });
 
     // get wish data
-    app.get('/wishlist/:email', async(req, res)=>{
+    app.get("/wishlist/:email", async (req, res) => {
       const email = req.params.email;
-      const query = {userEmail: email};
+      const query = { userEmail: email };
       const result = await wishListCollection.find(query).toArray();
       res.send(result);
-    })
-    
+    });
+
     // delete wish data
-    app.delete('/wish/:id', async(req, res)=>{
+    app.delete("/wish/:id", async (req, res) => {
       const id = req.params.id;
-      const query = {_id: new ObjectId(id)};
+      const query = { _id: new ObjectId(id) };
       const result = await wishListCollection.deleteOne(query);
       res.send(result);
-    })
-    
+    });
+
     // delete all wish data by email
-    app.delete('/userWish/:email', async(req, res)=>{
+    app.delete("/userWish/:email", async (req, res) => {
       const email = req.params.email;
-      const query = {userEmail: email};
+      const query = { userEmail: email };
       const result = await wishListCollection.deleteMany(query);
       res.send(result);
-    })
+    });
 
     console.log(
       "Pinged your deployment. You successfully connected to MongoDB!"
