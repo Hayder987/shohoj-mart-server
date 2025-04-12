@@ -27,6 +27,7 @@ async function run() {
     const reviewCollection = client.db("shohojmart").collection("reviews");
     const cartCollection = client.db("shohojmart").collection("cart");
     const wishListCollection = client.db("shohojmart").collection("wishList");
+    const paymentCollection = client.db("shohojmart").collection("payment");
 
      // stripe setup--------------------------------------->
      app.post("/create-payment-intent", async (req, res) => {
@@ -41,6 +42,13 @@ async function run() {
       });
       res.send({ clientSecret: paymentIntent.client_secret });
     });
+
+  //  post Payment data on server
+  app.post('/payment', async(req, res)=>{
+    const body = req.body;
+    const result = await paymentCollection.insertOne(body)
+    res.send(result)
+  })
 
     // post user data---------------
     app.post("/users", async (req, res) => {
@@ -102,7 +110,8 @@ async function run() {
     // post product data -----------
     app.post("/addProduct", async (req, res) => {
       const data = req.body;
-      data.price = parseInt(data.price);  
+      data.price = parseInt(data.price); 
+      data.stock = parseInt(data.stock) 
       const result = await productCollection.insertOne(data);
       res.send(result);
     });
@@ -121,7 +130,7 @@ async function run() {
           category: product.category,
           price: parseInt(product.price),
           feature: product.feature,
-          stock: product.stock,
+          stock: parseInt(product.stock),
           productCode: product.productCode,
           image: product.image,
           updateOn: product.updateOn,
