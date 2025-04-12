@@ -80,6 +80,14 @@ async function run() {
       res.send(result)
     })
 
+    // get user Order Data
+    app.get('/myOrder/:email', async(req, res)=>{
+      const email = req.params.email;
+      const query = {userEmail: email}
+      const result = await paymentCollection.find(query).sort({_id: -1}).toArray();
+      res.send(result);
+    })
+
     // update single order status
     app.patch('/updateOrder/:id', async(req, res)=>{
       const id = req.params.id;
