@@ -18,6 +18,26 @@ app.use(cors({
 app.use(express.json());
 app.use(cookieParser());
 
+const verifyToken = (req, res, next)=>{
+  const token = req.cookies.token;
+  if(!token){
+    return res
+    .status(401)
+    .send("UnAuthorized: Authentication credentials are missing");
+  }
+
+  jwt.verify(token, process.env.JSON_TOKEN, (err, decoded)=>{
+    if (err) {
+      return res
+        .status(401)
+        .send("UnAuthorized: Authentication credentials are inValid");
+    }
+
+    req.user = decoded;
+    next();
+  })
+}
+
 const uri = `mongodb+srv://${process.env.DB_USER}:${process.env.DB_PASSWORD}@cluster0.khimxsm.mongodb.net/?retryWrites=true&w=majority&appName=Cluster0`;
 
 const client = new MongoClient(uri, {
