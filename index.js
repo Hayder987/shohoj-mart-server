@@ -1,14 +1,22 @@
 require("dotenv").config();
 const express = require("express");
+const cookieParser = require('cookie-parser');
 const { MongoClient, ServerApiVersion, ObjectId } = require("mongodb");
 const port = process.env.PORT || 5000;
 const cors = require("cors");
 const app = express();
 const Stripe = require("stripe");
 const stripe = new Stripe(process.env.STRIPE_SECRET_KEY);
+const jwt = require('jsonwebtoken');
 
-app.use(cors());
+
+app.use(cors({
+  origin: ["http://localhost:5173", ],
+  credentials: true,
+}));
+
 app.use(express.json());
+app.use(cookieParser());
 
 const uri = `mongodb+srv://${process.env.DB_USER}:${process.env.DB_PASSWORD}@cluster0.khimxsm.mongodb.net/?retryWrites=true&w=majority&appName=Cluster0`;
 
@@ -28,6 +36,24 @@ async function run() {
     const cartCollection = client.db("shohojmart").collection("cart");
     const wishListCollection = client.db("shohojmart").collection("wishList");
     const paymentCollection = client.db("shohojmart").collection("payment");
+
+    app.post('/jwt', (req, res)=>{
+      const user = req.body;
+      const token = jwt.sign(user, process.env.JSON_TOKEN, {
+        expiresIn:'7d',
+      })
+      res.cookie('token', token, {
+        secure: process.env.NODE_ENV === "production",
+        sameSite: process.env.NODE_ENV === "production" ? "none" : "strict",
+      }).send({status:true})
+    })
+
+    app.post('/logout', (req, res)=>{
+      res.clearCookie('token', {
+        secure: process.env.NODE_ENV === "production",
+          sameSite: process.env.NODE_ENV === "production" ? "none" : "strict",  
+      }).send({status:false})
+    })
 
     // stripe setup--------------------------------------->
     app.post("/create-payment-intent", async (req, res) => {
