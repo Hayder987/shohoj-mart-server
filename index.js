@@ -166,7 +166,7 @@ async function run() {
     })
 
     // Gallery Api -------------------------------------------->
-    app.post ('/gallery', async(req, res)=>{
+    app.post ('/gallery',verifyToken, async(req, res)=>{
       const body = req.body;
       const result = await galleryCollection.insertOne(body)
       res.send(result)
@@ -210,6 +210,20 @@ async function run() {
       const updateDoc={
         $set:{
           cover:body.cover
+        }
+      }
+      const result = await userCollection.updateOne(query, updateDoc);
+      res.send(result)
+    })
+
+     // update user Profile Photo
+     app.patch('/updateProfilePhoto/:email', verifyToken, async(req, res)=>{
+      const email = req.params.email;
+      const body = req.body;
+      const query = {email: email}
+      const updateDoc={
+        $set:{
+          profile:body.photo
         }
       }
       const result = await userCollection.updateOne(query, updateDoc);
