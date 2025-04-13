@@ -75,6 +75,18 @@ async function run() {
       }).send({status:false})
     })
 
+     // verify Admin
+     const verifyAdmin = async (req, res, next) => {
+      const email = req.user.email;
+      const query = { email: email };
+      const userData = await userCollection.findOne(query);
+      const isAdmin = userData.role === "admin";
+      if (!isAdmin) {
+        return res.status(403).send("forbidden Access");
+      }
+      next();
+    };
+
     // stripe setup--------------------------------------->
     app.post("/create-payment-intent", async (req, res) => {
       const { price } = req.body;
