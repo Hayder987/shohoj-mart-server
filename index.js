@@ -56,6 +56,7 @@ async function run() {
     const cartCollection = client.db("shohojmart").collection("cart");
     const wishListCollection = client.db("shohojmart").collection("wishList");
     const paymentCollection = client.db("shohojmart").collection("payment");
+    const galleryCollection = client.db("shohojmart").collection("gallery");
 
     app.post('/jwt', (req, res)=>{
       const user = req.body;
@@ -164,6 +165,14 @@ async function run() {
       res.send(result)
     })
 
+    // Gallery Api -------------------------------------------->
+    app.post ('/gallery', async(req, res)=>{
+      const body = req.body;
+      const result = await galleryCollection.insertOne(body)
+      res.send(result)
+    })
+    
+    //  user Api ------------------------------------------------------>
     // post user data---------------
     app.post("/users", async (req, res) => {
       const user = req.body;
@@ -178,6 +187,34 @@ async function run() {
       });
       res.send({ status: true, result });
     });
+
+    // update user name
+    app.patch('/updateName/:email', verifyToken, async(req, res)=>{
+      const email = req.params.email;
+      const body = req.body;
+      const query = {email: email}
+      const updateDoc={
+        $set:{
+          name:body.name
+        }
+      }
+      const result = await userCollection.updateOne(query, updateDoc);
+      res.send(result)
+    })
+
+    // update user cover Photo
+    app.patch('/updateCover/:email', verifyToken, async(req, res)=>{
+      const email = req.params.email;
+      const body = req.body;
+      const query = {email: email}
+      const updateDoc={
+        $set:{
+          cover:body.cover
+        }
+      }
+      const result = await userCollection.updateOne(query, updateDoc);
+      res.send(result)
+    })
 
     // get All User
     app.get("/allUser", verifyToken, verifyAdmin, async (req, res) => {
