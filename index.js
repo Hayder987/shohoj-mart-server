@@ -120,7 +120,7 @@ async function run() {
     });
 
     // get all order data
-    app.get('/allOrder', verifyToken, async(req, res)=>{
+    app.get('/allOrder', verifyToken,verifyAdmin, async(req, res)=>{
       const sort = req.query.sort;
       let query = {}
       if(sort){
@@ -352,7 +352,7 @@ async function run() {
     // review Api ------------------------------------------------------------->
 
     // post review data
-    app.post("/review",verifyToken, async (req, res) => {
+    app.post("/review", async (req, res) => {
       const review = req.body;
       const result = await reviewCollection.insertOne(review);
       res.send(result);
@@ -395,12 +395,8 @@ async function run() {
     });
 
     // get cart Data
-    app.get("/cart/:email",verifyToken, async (req, res) => {
+    app.get("/cart/:email", async (req, res) => {
       const email = req.params.email;
-      const useremail = req.user.email;
-      if(useremail !== email){
-        return res.status(403).send("forbidden Access")
-      }
       const query = { userEmail: email };
       const result = await cartCollection.find(query).toArray();
       res.send(result);
