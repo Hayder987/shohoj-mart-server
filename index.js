@@ -120,7 +120,7 @@ async function run() {
     });
 
     // get all order data
-    app.get('/allOrder', async(req, res)=>{
+    app.get('/allOrder', verifyToken, async(req, res)=>{
       const sort = req.query.sort;
       let query = {}
       if(sort){
@@ -131,7 +131,7 @@ async function run() {
     })
 
     // get single order data
-    app.get('/singleOrder/:id', async(req, res)=>{
+    app.get('/singleOrder/:id', verifyToken, async(req, res)=>{
       const id = req.params.id;
       const query = {_id: new ObjectId(id)}
       const result = await paymentCollection.findOne(query)
@@ -139,15 +139,19 @@ async function run() {
     })
 
     // get user Order Data
-    app.get('/myOrder/:email', async(req, res)=>{
+    app.get('/myOrder/:email',verifyToken, async(req, res)=>{
       const email = req.params.email;
+      const useremail = req.user.email;
+      if(useremail !== email){
+        return res.status(403).send("forbidden Access")
+      }
       const query = {userEmail: email}
       const result = await paymentCollection.find(query).sort({_id: -1}).toArray();
       res.send(result);
     })
 
     // update single order status
-    app.patch('/updateOrder/:id', async(req, res)=>{
+    app.patch('/updateOrder/:id', verifyToken, verifyAdmin, async(req, res)=>{
       const id = req.params.id;
       const body = req.body;
       const query = {_id: new ObjectId(id)}
@@ -176,7 +180,7 @@ async function run() {
     });
 
     // get All User
-    app.get("/allUser", async (req, res) => {
+    app.get("/allUser", verifyToken, verifyAdmin, async (req, res) => {
       const role = req.query.role;
       let query = {};
       if (role) {
@@ -187,7 +191,7 @@ async function run() {
     });
 
     // update user Data role
-    app.patch("/updateUser/:id", async (req, res) => {
+    app.patch("/updateUser/:id", verifyToken, verifyAdmin, async (req, res) => {
       const id = req.params.id;
       const body = req.body;
       const query = { _id: new ObjectId(id) };
@@ -202,7 +206,7 @@ async function run() {
     });
 
     // delete user Data
-    app.delete("/deleteUser/:id", async (req, res) => {
+    app.delete("/deleteUser/:id",verifyToken, verifyAdmin, async (req, res) => {
       const id = req.params.id;
       const query = { _id: new ObjectId(id) };
       const result = await userCollection.deleteOne(query);
@@ -218,7 +222,7 @@ async function run() {
     });
 
     // post product data -----------
-    app.post("/addProduct", async (req, res) => {
+    app.post("/addProduct",verifyToken, verifyAdmin, async (req, res) => {
       const data = req.body;
       data.price = parseInt(data.price);
       data.stock = parseInt(data.stock);
@@ -227,7 +231,7 @@ async function run() {
     });
 
     // update product data by id
-    app.patch("/product/:id", async (req, res) => {
+    app.patch("/product/:id",verifyToken, verifyAdmin, async (req, res) => {
       const id = req.params.id;
       const product = req.body;
       const query = { _id: new ObjectId(id) };
@@ -338,7 +342,7 @@ async function run() {
     });
 
     // delete product data----------------
-    app.delete("/deleteProduct/:id", async (req, res) => {
+    app.delete("/deleteProduct/:id", verifyToken, verifyAdmin, async (req, res) => {
       const id = req.params.id;
       const query = { _id: new ObjectId(id) };
       const result = await productCollection.deleteOne(query);
@@ -348,7 +352,7 @@ async function run() {
     // review Api ------------------------------------------------------------->
 
     // post review data
-    app.post("/review", async (req, res) => {
+    app.post("/review",verifyToken, async (req, res) => {
       const review = req.body;
       const result = await reviewCollection.insertOne(review);
       res.send(result);
@@ -369,7 +373,7 @@ async function run() {
     // cart Api------------------------------------------------------------------------->
 
     // post cart data single
-    app.post("/cart", async (req, res) => {
+    app.post("/cart",verifyToken, async (req, res) => {
       const cart = req.body;
       const isExist = await cartCollection.findOne({
         porductId: cart.porductId,
@@ -383,7 +387,7 @@ async function run() {
     });
 
     // post cart data many
-    app.post("/carts", async (req, res) => {
+    app.post("/carts",verifyToken, async (req, res) => {
       const data = req.body;
       const options = { ordered: true };
       const result = await cartCollection.insertMany(data, options);
@@ -391,23 +395,27 @@ async function run() {
     });
 
     // get cart Data
-    app.get("/cart/:email", async (req, res) => {
+    app.get("/cart/:email",verifyToken, async (req, res) => {
       const email = req.params.email;
+      const useremail = req.user.email;
+      if(useremail !== email){
+        return res.status(403).send("forbidden Access")
+      }
       const query = { userEmail: email };
       const result = await cartCollection.find(query).toArray();
       res.send(result);
     });
 
     // delete cart data by id--
-    app.delete("/cart/:id", async (req, res) => {
+    app.delete("/cart/:id",verifyToken, async (req, res) => {
       const id = req.params.id;
       const query = { _id: new ObjectId(id) };
       const result = await cartCollection.deleteOne(query);
       res.send(result);
     });
 
-    // delete all data by email
-    app.delete("/userCart/:email", async (req, res) => {
+    // delete all cart data by email
+    app.delete("/userCart/:email", verifyToken, async (req, res) => {
       const email = req.params.email;
       const query = { userEmail: email };
       const result = await cartCollection.deleteMany(query);
@@ -417,7 +425,7 @@ async function run() {
     // wish List API --------------------------------------------------------->
 
     // post wish list
-    app.post("/wishlist", async (req, res) => {
+    app.post("/wishlist",verifyToken, async (req, res) => {
       const wishList = req.body;
       const isExist = await wishListCollection.findOne({
         porductId: wishList.porductId,
@@ -431,15 +439,19 @@ async function run() {
     });
 
     // get wish data
-    app.get("/wishlist/:email", async (req, res) => {
+    app.get("/wishlist/:email",verifyToken, async (req, res) => {
       const email = req.params.email;
+      const useremail = req.user.email;
+      if(useremail !== email){
+        return res.status(403).send("forbidden Access")
+      }
       const query = { userEmail: email };
       const result = await wishListCollection.find(query).toArray();
       res.send(result);
     });
 
     // delete wish data
-    app.delete("/wish/:id", async (req, res) => {
+    app.delete("/wish/:id",verifyToken, async (req, res) => {
       const id = req.params.id;
       const query = { _id: new ObjectId(id) };
       const result = await wishListCollection.deleteOne(query);
@@ -447,8 +459,12 @@ async function run() {
     });
 
     // delete all wish data by email
-    app.delete("/userWish/:email", async (req, res) => {
+    app.delete("/userWish/:email", verifyToken, async (req, res) => {
       const email = req.params.email;
+      const useremail = req.user.email;
+      if(useremail !== email){
+        return res.status(403).send("forbidden Access")
+      }
       const query = { userEmail: email };
       const result = await wishListCollection.deleteMany(query);
       res.send(result);
