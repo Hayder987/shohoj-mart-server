@@ -230,6 +230,14 @@ async function run() {
       res.send(result)
     })
 
+    // get profile gallery by email--------
+    app.get('/gallery/:email',verifyToken, async(req, res)=>{
+      const email = req.params.email;
+      const query = {email:email}
+      const result = await galleryCollection.find(query).toArray();
+      res.send(result);
+    })
+
     // get All User
     app.get("/allUser", verifyToken, verifyAdmin, async (req, res) => {
       const role = req.query.role;
