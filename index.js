@@ -106,19 +106,22 @@ async function run() {
     app.post('/payment', async (req, res) => {
       const body = req.body;
       const itemsList = body.itemsList;
-  
+    
       for (const item of itemsList) {
         const productId = item;
         const objectId = new ObjectId(productId);
-  
+    
         await productCollection.updateOne(
-          { _id: objectId },
+          { _id: objectId, stock: { $gt: 0 } }, 
           { $inc: { stock: -1 } }
         );
       }
+    
       const result = await paymentCollection.insertOne(body);
       res.send(result);
     });
+    
+    
 
     // get all order data
     app.get('/allOrder', verifyToken,verifyAdmin, async(req, res)=>{
