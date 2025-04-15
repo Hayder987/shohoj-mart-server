@@ -234,7 +234,15 @@ async function run() {
     app.get('/gallery/:email',verifyToken, async(req, res)=>{
       const email = req.params.email;
       const query = {email:email}
-      const result = await galleryCollection.find(query).toArray();
+      const result = await galleryCollection.find(query).sort({_id: -1}).toArray();
+      res.send(result);
+    })
+
+    // delete gallery photo by id
+    app.delete('/gallery/:id',verifyToken, async(req, res)=>{
+      const id = req.params.id;
+      const query = {_id: new ObjectId(id)}
+      const result = await galleryCollection.deleteOne(query);
       res.send(result);
     })
 
