@@ -83,7 +83,7 @@ async function run() {
 
     // get all informaton for admin
 
-    app.get('/allInformation', async (req, res) => {
+    app.get('/allInformation', verifyToken, async (req, res) => {
       try {
         const allUser = await userCollection.countDocuments();
         const allProduct = await productCollection.countDocuments();
