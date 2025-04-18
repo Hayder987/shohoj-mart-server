@@ -1,32 +1,33 @@
 require("dotenv").config();
 const express = require("express");
-const cookieParser = require('cookie-parser');
+const cookieParser = require("cookie-parser");
 const { MongoClient, ServerApiVersion, ObjectId } = require("mongodb");
 const port = process.env.PORT || 5000;
 const cors = require("cors");
 const app = express();
 const Stripe = require("stripe");
 const stripe = new Stripe(process.env.STRIPE_SECRET_KEY);
-const jwt = require('jsonwebtoken');
+const jwt = require("jsonwebtoken");
 
-
-app.use(cors({
-  origin: ["http://localhost:5173", ],
-  credentials: true,
-}));
+app.use(
+  cors({
+    origin: ["http://localhost:5173"],
+    credentials: true,
+  })
+);
 
 app.use(express.json());
 app.use(cookieParser());
 
-const verifyToken = (req, res, next)=>{
+const verifyToken = (req, res, next) => {
   const token = req.cookies.token;
-  if(!token){
+  if (!token) {
     return res
-    .status(401)
-    .send("UnAuthorized: Authentication credentials are missing");
+      .status(401)
+      .send("UnAuthorized: Authentication credentials are missing");
   }
 
-  jwt.verify(token, process.env.JSON_TOKEN, (err, decoded)=>{
+  jwt.verify(token, process.env.JSON_TOKEN, (err, decoded) => {
     if (err) {
       return res
         .status(401)
@@ -35,8 +36,8 @@ const verifyToken = (req, res, next)=>{
 
     req.user = decoded;
     next();
-  })
-}
+  });
+};
 
 const uri = `mongodb+srv://${process.env.DB_USER}:${process.env.DB_PASSWORD}@cluster0.khimxsm.mongodb.net/?retryWrites=true&w=majority&appName=Cluster0`;
 
@@ -58,47 +59,101 @@ async function run() {
     const paymentCollection = client.db("shohojmart").collection("payment");
     const galleryCollection = client.db("shohojmart").collection("gallery");
 
-    app.post('/jwt', (req, res)=>{
+    app.post("/jwt", (req, res) => {
       const user = req.body;
       const token = jwt.sign(user, process.env.JSON_TOKEN, {
-        expiresIn:'7d',
-      })
-      res.cookie('token', token, {
-        secure: process.env.NODE_ENV === "production",
-        sameSite: process.env.NODE_ENV === "production" ? "none" : "strict",
-      }).send({status:true})
-    })
-
-    app.post('/logout', (req, res)=>{
-      res.clearCookie('token', {
-        secure: process.env.NODE_ENV === "production",
-          sameSite: process.env.NODE_ENV === "production" ? "none" : "strict",  
-      }).send({status:false})
+        expiresIn: "7d",
+      });
+      res
+        .cookie("token", token, {
+          secure: process.env.NODE_ENV === "production",
+          sameSite: process.env.NODE_ENV === "production" ? "none" : "strict",
+        })
+        .send({ status: true });
     });
 
-    // get all informaton for admin 
-    app.get('/allInformation', async(req, res)=>{
-      const allUser = await userCollection.countDocuments();
-      const allProduct = await productCollection.countDocuments();
-      const allOrder = await paymentCollection.countDocuments();
-      const allReviewCollection = await reviewCollection.countDocuments();
-      const TotalIncome = await paymentCollection.aggregate([
-        {
-          $group: {
-            _id: null,
-            totalAmount: { $sum: "$paidAmount" },
-          },
-        },
-      ])
-      .toArray();
+    app.post("/logout", (req, res) => {
+      res
+        .clearCookie("token", {
+          secure: process.env.NODE_ENV === "production",
+          sameSite: process.env.NODE_ENV === "production" ? "none" : "strict",
+        })
+        .send({ status: false });
+    });
 
-      res.send({allUser, allProduct, allOrder, allReviewCollection, TotalIncome})
-    })
+    // get all informaton for admin
+
+    app.get('/allInformation', async (req, res) => {
+      try {
+        const allUser = await userCollection.countDocuments();
+        const allProduct = await productCollection.countDocuments();
+        const allOrder = await paymentCollection.countDocuments();
+        const allReviewCollection = await reviewCollection.countDocuments();
+    
+        // Total Income
+        const TotalIncomeData = await paymentCollection.aggregate([
+          {
+            $group: {
+              _id: null,
+              totalAmount: { $sum: "$paidAmount" },
+            },
+          },
+        ]).toArray();
+        const TotalIncome = TotalIncomeData[0]?.totalAmount || 0;
+    
+        // Best selling products
+        const bestSellingData = await paymentCollection.aggregate([
+          { $unwind: "$itemsList" },
+          {
+            $group: {
+              _id: "$itemsList", 
+              count: { $sum: 1 },
+            },
+          },
+          {
+            $project: {
+              count: 1,
+              productObjectId: { $toObjectId: "$_id" }
+            }
+          },
+          {
+            $lookup: {
+              from: "products", 
+              localField: "productObjectId",
+              foreignField: "_id",
+              as: "productInfo"
+            }
+          },
+          { $unwind: "$productInfo" },
+          {
+            $project: {
+              _id: 0,
+              productId: "$productObjectId",
+              title: "$productInfo.title",
+              count: 1
+            }
+          },
+          { $sort: { count: -1 } },
+          { $limit: 10 }
+        ]).toArray();
+    
+        res.send({
+          allUser,
+          allProduct,
+          allOrder,
+          allReviewCollection,
+          TotalIncome,
+          bestSellingData,
+        });
+      } catch (error) {
+        console.error("Error in /allInformation:", error);
+        res.status(500).send({ error: "Internal Server Error" });
+      }
+    });
     
 
-
-     // verify Admin
-     const verifyAdmin = async (req, res, next) => {
+    // verify Admin
+    const verifyAdmin = async (req, res, next) => {
       const email = req.user.email;
       const query = { email: email };
       const userData = await userCollection.findOne(query);
@@ -124,78 +179,87 @@ async function run() {
     });
 
     //  post Payment data on server and reduce stock
-    app.post('/payment', async (req, res) => {
+    app.post("/payment", async (req, res) => {
       const body = req.body;
       const itemsList = body.itemsList;
-    
+
       for (const item of itemsList) {
         const productId = item;
         const objectId = new ObjectId(productId);
-    
+
         await productCollection.updateOne(
-          { _id: objectId, stock: { $gt: 0 } }, 
+          { _id: objectId, stock: { $gt: 0 } },
           { $inc: { stock: -1 } }
         );
       }
-    
+
       const result = await paymentCollection.insertOne(body);
       res.send(result);
     });
-    
-    
 
     // get all order data
-    app.get('/allOrder', verifyToken,verifyAdmin, async(req, res)=>{
+    app.get("/allOrder", verifyToken, verifyAdmin, async (req, res) => {
       const sort = req.query.sort;
-      let query = {}
-      if(sort){
-        query = {status:sort}
+      let query = {};
+      if (sort) {
+        query = { status: sort };
       }
-      const result = await paymentCollection.find(query).sort({_id: -1}).toArray();
+      const result = await paymentCollection
+        .find(query)
+        .sort({ _id: -1 })
+        .toArray();
       res.send(result);
-    })
+    });
 
     // get single order data
-    app.get('/singleOrder/:id', verifyToken, async(req, res)=>{
+    app.get("/singleOrder/:id", verifyToken, async (req, res) => {
       const id = req.params.id;
-      const query = {_id: new ObjectId(id)}
-      const result = await paymentCollection.findOne(query)
-      res.send(result)
-    })
+      const query = { _id: new ObjectId(id) };
+      const result = await paymentCollection.findOne(query);
+      res.send(result);
+    });
 
     // get user Order Data
-    app.get('/myOrder/:email',verifyToken, async(req, res)=>{
+    app.get("/myOrder/:email", verifyToken, async (req, res) => {
       const email = req.params.email;
       const useremail = req.user.email;
-      if(useremail !== email){
-        return res.status(403).send("forbidden Access")
+      if (useremail !== email) {
+        return res.status(403).send("forbidden Access");
       }
-      const query = {userEmail: email}
-      const result = await paymentCollection.find(query).sort({_id: -1}).toArray();
+      const query = { userEmail: email };
+      const result = await paymentCollection
+        .find(query)
+        .sort({ _id: -1 })
+        .toArray();
       res.send(result);
-    })
+    });
 
     // update single order status
-    app.patch('/updateOrder/:id', verifyToken, verifyAdmin, async(req, res)=>{
-      const id = req.params.id;
-      const body = req.body;
-      const query = {_id: new ObjectId(id)}
-      const updateDoc = {
-        $set:{
-          status: body.status
-        }
+    app.patch(
+      "/updateOrder/:id",
+      verifyToken,
+      verifyAdmin,
+      async (req, res) => {
+        const id = req.params.id;
+        const body = req.body;
+        const query = { _id: new ObjectId(id) };
+        const updateDoc = {
+          $set: {
+            status: body.status,
+          },
+        };
+        const result = await paymentCollection.updateOne(query, updateDoc);
+        res.send(result);
       }
-      const result = await paymentCollection.updateOne(query, updateDoc)
-      res.send(result)
-    })
+    );
 
     // Gallery Api -------------------------------------------->
-    app.post ('/gallery',verifyToken, async(req, res)=>{
+    app.post("/gallery", verifyToken, async (req, res) => {
       const body = req.body;
-      const result = await galleryCollection.insertOne(body)
-      res.send(result)
-    })
-    
+      const result = await galleryCollection.insertOne(body);
+      res.send(result);
+    });
+
     //  user Api ------------------------------------------------------>
     // post user data---------------
     app.post("/users", async (req, res) => {
@@ -213,62 +277,65 @@ async function run() {
     });
 
     // update user name
-    app.patch('/updateName/:email', verifyToken, async(req, res)=>{
+    app.patch("/updateName/:email", verifyToken, async (req, res) => {
       const email = req.params.email;
       const body = req.body;
-      const query = {email: email}
-      const updateDoc={
-        $set:{
-          name:body.name
-        }
-      }
+      const query = { email: email };
+      const updateDoc = {
+        $set: {
+          name: body.name,
+        },
+      };
       const result = await userCollection.updateOne(query, updateDoc);
-      res.send(result)
-    })
+      res.send(result);
+    });
 
     // update user cover Photo
-    app.patch('/updateCover/:email', verifyToken, async(req, res)=>{
+    app.patch("/updateCover/:email", verifyToken, async (req, res) => {
       const email = req.params.email;
       const body = req.body;
-      const query = {email: email}
-      const updateDoc={
-        $set:{
-          cover:body.cover
-        }
-      }
+      const query = { email: email };
+      const updateDoc = {
+        $set: {
+          cover: body.cover,
+        },
+      };
       const result = await userCollection.updateOne(query, updateDoc);
-      res.send(result)
-    })
+      res.send(result);
+    });
 
-     // update user Profile Photo
-     app.patch('/updateProfilePhoto/:email', verifyToken, async(req, res)=>{
+    // update user Profile Photo
+    app.patch("/updateProfilePhoto/:email", verifyToken, async (req, res) => {
       const email = req.params.email;
       const body = req.body;
-      const query = {email: email}
-      const updateDoc={
-        $set:{
-          profile:body.photo
-        }
-      }
+      const query = { email: email };
+      const updateDoc = {
+        $set: {
+          profile: body.photo,
+        },
+      };
       const result = await userCollection.updateOne(query, updateDoc);
-      res.send(result)
-    })
+      res.send(result);
+    });
 
     // get profile gallery by email--------
-    app.get('/gallery/:email',verifyToken, async(req, res)=>{
+    app.get("/gallery/:email", verifyToken, async (req, res) => {
       const email = req.params.email;
-      const query = {email:email}
-      const result = await galleryCollection.find(query).sort({_id: -1}).toArray();
+      const query = { email: email };
+      const result = await galleryCollection
+        .find(query)
+        .sort({ _id: -1 })
+        .toArray();
       res.send(result);
-    })
+    });
 
     // delete gallery photo by id
-    app.delete('/gallery/:id',verifyToken, async(req, res)=>{
+    app.delete("/gallery/:id", verifyToken, async (req, res) => {
       const id = req.params.id;
-      const query = {_id: new ObjectId(id)}
+      const query = { _id: new ObjectId(id) };
       const result = await galleryCollection.deleteOne(query);
       res.send(result);
-    })
+    });
 
     // get All User
     app.get("/allUser", verifyToken, verifyAdmin, async (req, res) => {
@@ -297,12 +364,17 @@ async function run() {
     });
 
     // delete user Data
-    app.delete("/deleteUser/:id",verifyToken, verifyAdmin, async (req, res) => {
-      const id = req.params.id;
-      const query = { _id: new ObjectId(id) };
-      const result = await userCollection.deleteOne(query);
-      res.send(result);
-    });
+    app.delete(
+      "/deleteUser/:id",
+      verifyToken,
+      verifyAdmin,
+      async (req, res) => {
+        const id = req.params.id;
+        const query = { _id: new ObjectId(id) };
+        const result = await userCollection.deleteOne(query);
+        res.send(result);
+      }
+    );
 
     // get user Data by email---------
     app.get("/user/:email", async (req, res) => {
@@ -313,7 +385,7 @@ async function run() {
     });
 
     // post product data -----------
-    app.post("/addProduct",verifyToken, verifyAdmin, async (req, res) => {
+    app.post("/addProduct", verifyToken, verifyAdmin, async (req, res) => {
       const data = req.body;
       data.price = parseInt(data.price);
       data.stock = parseInt(data.stock);
@@ -322,7 +394,7 @@ async function run() {
     });
 
     // update product data by id
-    app.patch("/product/:id",verifyToken, verifyAdmin, async (req, res) => {
+    app.patch("/product/:id", verifyToken, verifyAdmin, async (req, res) => {
       const id = req.params.id;
       const product = req.body;
       const query = { _id: new ObjectId(id) };
@@ -433,12 +505,17 @@ async function run() {
     });
 
     // delete product data----------------
-    app.delete("/deleteProduct/:id", verifyToken, verifyAdmin, async (req, res) => {
-      const id = req.params.id;
-      const query = { _id: new ObjectId(id) };
-      const result = await productCollection.deleteOne(query);
-      res.send(result);
-    });
+    app.delete(
+      "/deleteProduct/:id",
+      verifyToken,
+      verifyAdmin,
+      async (req, res) => {
+        const id = req.params.id;
+        const query = { _id: new ObjectId(id) };
+        const result = await productCollection.deleteOne(query);
+        res.send(result);
+      }
+    );
 
     // review Api ------------------------------------------------------------->
 
@@ -464,7 +541,7 @@ async function run() {
     // cart Api------------------------------------------------------------------------->
 
     // post cart data single
-    app.post("/cart",verifyToken, async (req, res) => {
+    app.post("/cart", verifyToken, async (req, res) => {
       const cart = req.body;
       const isExist = await cartCollection.findOne({
         porductId: cart.porductId,
@@ -478,7 +555,7 @@ async function run() {
     });
 
     // post cart data many
-    app.post("/carts",verifyToken, async (req, res) => {
+    app.post("/carts", verifyToken, async (req, res) => {
       const data = req.body;
       const options = { ordered: true };
       const result = await cartCollection.insertMany(data, options);
@@ -494,7 +571,7 @@ async function run() {
     });
 
     // delete cart data by id--
-    app.delete("/cart/:id",verifyToken, async (req, res) => {
+    app.delete("/cart/:id", verifyToken, async (req, res) => {
       const id = req.params.id;
       const query = { _id: new ObjectId(id) };
       const result = await cartCollection.deleteOne(query);
@@ -512,7 +589,7 @@ async function run() {
     // wish List API --------------------------------------------------------->
 
     // post wish list
-    app.post("/wishlist",verifyToken, async (req, res) => {
+    app.post("/wishlist", verifyToken, async (req, res) => {
       const wishList = req.body;
       const isExist = await wishListCollection.findOne({
         porductId: wishList.porductId,
@@ -526,11 +603,11 @@ async function run() {
     });
 
     // get wish data
-    app.get("/wishlist/:email",verifyToken, async (req, res) => {
+    app.get("/wishlist/:email", verifyToken, async (req, res) => {
       const email = req.params.email;
       const useremail = req.user.email;
-      if(useremail !== email){
-        return res.status(403).send("forbidden Access")
+      if (useremail !== email) {
+        return res.status(403).send("forbidden Access");
       }
       const query = { userEmail: email };
       const result = await wishListCollection.find(query).toArray();
@@ -538,7 +615,7 @@ async function run() {
     });
 
     // delete wish data
-    app.delete("/wish/:id",verifyToken, async (req, res) => {
+    app.delete("/wish/:id", verifyToken, async (req, res) => {
       const id = req.params.id;
       const query = { _id: new ObjectId(id) };
       const result = await wishListCollection.deleteOne(query);
@@ -549,8 +626,8 @@ async function run() {
     app.delete("/userWish/:email", verifyToken, async (req, res) => {
       const email = req.params.email;
       const useremail = req.user.email;
-      if(useremail !== email){
-        return res.status(403).send("forbidden Access")
+      if (useremail !== email) {
+        return res.status(403).send("forbidden Access");
       }
       const query = { userEmail: email };
       const result = await wishListCollection.deleteMany(query);
