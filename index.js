@@ -74,7 +74,28 @@ async function run() {
         secure: process.env.NODE_ENV === "production",
           sameSite: process.env.NODE_ENV === "production" ? "none" : "strict",  
       }).send({status:false})
+    });
+
+    // get all informaton for admin 
+    app.get('/allInformation', async(req, res)=>{
+      const allUser = await userCollection.countDocuments();
+      const allProduct = await productCollection.countDocuments();
+      const allOrder = await paymentCollection.countDocuments();
+      const allReviewCollection = await reviewCollection.countDocuments();
+      const TotalIncome = await paymentCollection.aggregate([
+        {
+          $group: {
+            _id: null,
+            totalAmount: { $sum: "$paidAmount" },
+          },
+        },
+      ])
+      .toArray();
+
+      res.send({allUser, allProduct, allOrder, allReviewCollection, TotalIncome})
     })
+    
+
 
      // verify Admin
      const verifyAdmin = async (req, res, next) => {
