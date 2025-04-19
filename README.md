@@ -8,7 +8,7 @@ This is the **backend server** of [ShohojMart+](https://shohojmart-f8a93.web.app
 
 - 🛒 **Client (Frontend)**: [https://shohojmart-f8a93.web.app](https://shohojmart-f8a93.web.app)
 - 🔗 **API Base URL**: [https://shohojmart-server.vercel.app](https://shohojmart-server.vercel.app)
-- 📁 **Frontend Repo**: [GitHub - ShohojMart+ Client](https://github.com/your-username/shohojmart-plus)
+- 📁 **Frontend Repo**: [GitHub - ShohojMart+ Client](https://github.com/Hayder987/shohoj-mart)
 - 📁 **Backend Repo**: [GitHub - ShohojMart+ Server](https://github.com/Hayder987/shohoj-mart-server)
 
 ---
