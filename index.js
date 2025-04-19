@@ -11,7 +11,7 @@ const jwt = require("jsonwebtoken");
 
 app.use(
   cors({
-    origin: ["http://localhost:5173"],
+    origin: ["http://localhost:5173", "https://shohojmart-f8a93.web.app"],
     credentials: true,
   })
 );
